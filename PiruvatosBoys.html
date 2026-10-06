@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-950">
+<head>
+    
+    <!-- Supabase JS Client -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>piruvatos inc - Control de Perfumes, Ventas y Apartados</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        purpletheme: {
+                            deepbg: '#0a0314',
+                            cardbg: '#140824',
+                            cardborder: '#3b1560',
+                            accent: '#a855f7',
+                            lightpurple: '#c084fc',
+                            brightpurple: '#d8b4fe',
+                            glow: '#9333ea',
+                            darkpurple: '#2e1065',
+                            softviolet: '#7e22ce'
+                        }
+                    },
+                    animation: {
+                        'float-bear': 'floatBear 4s ease-in-out infinite',
+                        'pop': 'pop 0.25s ease-out',
+                        'pulse-glow': 'pulseGlow 3s infinite',
+                        'bg-slow-zoom': 'bgSlowZoom 20s ease-in-out infinite alternate'
+                    },
+                    keyframes: {
+                        floatBear: {
+                            '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
+                            '50%': { transform: 'translateY(-8px) rotate(1deg)' }
+                        },
+                        pop: {
+                            '0%': { transform: 'scale(0.95)', opacity: '0' },
+                            '100%': { transform: 'scale(1)', opacity: '1' }
+                        },
+                        pulseGlow: {
+                            '0%, 100%': { opacity: '0.4' },
+                            '50%': { opacity: '0.8' }
+                        },
+                        bgSlowZoom: {
+                            '0%': { transform: 'scale(1)' },
+                            '100%': { transform: 'scale(1.06)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: #f3e8ff;
+            background-color: #06010a;
+        }
+
+        /* Imagen de Fondo: Graduation Art Wall */
+        .bg-image-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .bg-image-layer {
+            width: 100%;
+            height: 100%;
+            /* Portada original Graduation de Takashi Murakami / Kanye West */
+            background-image: url('https://upload.wikimedia.org/wikipedia/en/7/70/Graduation_%28album%29.jpg');
+            background-size: cover;
+            background-position: center;
+            filter: brightness(0.55) contrast(1.1) saturate(1.15);
+        }
+
+        .bg-overlay {
+            position: absolute;
+            inset: 0;
+            background: 
+                radial-gradient(circle at 20% 20%, rgba(168, 85, 247, 0.25) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(126, 34, 206, 0.3) 0%, transparent 50%),
+                linear-gradient(to bottom, rgba(15, 4, 28, 0.75), rgba(5, 1, 10, 0.92));
+        }
+
+        .matte-card {
+            background: rgba(18, 7, 33, 0.85);
+            border: 1px solid rgba(168, 85, 247, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            transition: all 0.3s ease;
+        }
+
+        .matte-card:hover {
+            border-color: rgba(192, 132, 252, 0.7);
+            box-shadow: 0 0 25px rgba(168, 85, 247, 0.3);
+        }
+
+        .purple-glow-text {
+            color: #d8b4fe;
+            text-shadow: 0 0 12px rgba(168, 85, 247, 0.6);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #090212;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #581c87;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #7e22ce;
+        }
+    </style>
+</head>
+<body class="h-full text-purple-100 flex flex-col min-h-screen relative overflow-x-hidden">
+
+    <!-- Fondo de Graduation con animación sutil -->
+    <div class="bg-image-container">
+        <div class="bg-image-layer animate-bg-slow-zoom"></div>
+        <div class="bg-overlay"></div>
+    </div>
+
+    <header class="border-b border-purple-900/60 bg-purple-950/80 backdrop-blur-md sticky top-0 z-30 shadow-lg shadow-purple-950/50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col md:flex-row justify-between items-center gap-4">
+            
+            <!-- Logo Brand & Bear Illustration -->
+            <div class="flex items-center space-x-3.5 cursor-pointer group" onclick="lanzarConfettiMatte()">
+                <div class="relative p-2 bg-gradient-to-tr from-purple-900 via-purple-700 to-fuchsia-600 rounded-2xl shadow-lg shadow-purple-900/40 border border-purple-400/40 animate-float-bear">
+                    <svg class="w-9 h-9 text-slate-950 fill-current" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="16" cy="18" r="9" fill="#c084fc" stroke="#10061a" stroke-width="2"/>
+                        <circle cx="16" cy="18" r="5" fill="#e879f9"/>
+                        <circle cx="48" cy="18" r="9" fill="#c084fc" stroke="#10061a" stroke-width="2"/>
+                        <circle cx="48" cy="18" r="5" fill="#e879f9"/>
+                        <circle cx="32" cy="34" r="22" fill="#c084fc" stroke="#10061a" stroke-width="2.5"/>
+                        <path d="M12 18 L32 8 L52 18 L32 26 Z" fill="#3b0764" stroke="#d8b4fe" stroke-width="1.8"/>
+                        <circle cx="47" cy="31" r="2" fill="#f0abfc"/>
+                        <rect x="20" y="30" width="10" height="7" rx="2" fill="#0d0614" stroke="#a855f7" stroke-width="1.5"/>
+                        <rect x="34" y="30" width="10" height="7" rx="2" fill="#0d0614" stroke="#a855f7" stroke-width="1.5"/>
+                        <ellipse cx="32" cy="43" rx="7" ry="5" fill="#f3e8ff"/>
+                        <polygon points="30,40 34,40 32,43" fill="#10061a"/>
+                    </svg>
+                </div>
+
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <h1 class="text-2xl font-black tracking-widest uppercase text-purple-200 purple-glow-text">
+                            piruvatos inc
+                        </h1>
+                        <span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded-md bg-purple-800/50 text-purple-200 border border-purple-500/50 shadow-sm animate-pulse">
+                            Graduation Edition
+                        </span>
+                    </div>
+                    <p class="text-xs text-purple-300/90 font-medium tracking-wide flex items-center gap-1.5">
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-fuchsia-400"></i>
+                        Perfumería, Control de Ventas & Apartados
+                    </p>
+                </div>
+            </div>
+
+            <!-- Action Controls in Header -->
+            <div class="flex items-center space-x-2 flex-wrap justify-center">
+                <div class="text-xs font-medium px-3 py-1.5 rounded-xl bg-purple-900/40 border border-purple-700/50 text-purple-200 flex items-center gap-1.5">
+                    <i data-lucide="database" class="w-3.5 h-3.5 text-emerald-400"></i>
+                    <span>Autoguardado Local</span>
+                </div>
+
+                <button onclick="exportarReporteCSV()" class="inline-flex items-center px-3 py-1.5 border border-purple-700/60 hover:border-fuchsia-400/80 rounded-xl text-xs font-semibold text-purple-200 bg-purple-900/40 hover:bg-purple-800/60 transition duration-200 hover:scale-105 active:scale-95 shadow-md">
+                    <i data-lucide="download" class="w-3.5 h-3.5 mr-1.5 text-fuchsia-300"></i>
+                    Exportar
+                </button>
+
+                <button onclick="confirmarCierreCaja()" class="inline-flex items-center px-3 py-1.5 border border-purple-700/60 hover:border-purple-400 rounded-xl text-xs font-semibold text-purple-200 bg-purple-900/40 hover:bg-purple-800/60 transition duration-200 hover:scale-105 active:scale-95 shadow-md">
+                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 mr-1.5 text-purple-300"></i>
+                    Cierre Turno
+                </button>
+
+                <button onclick="confirmarBorrarTodo()" class="inline-flex items-center px-3 py-1.5 border border-rose-900/60 hover:border-rose-500 rounded-xl text-xs font-semibold text-rose-300 bg-rose-950/40 hover:bg-rose-900/60 transition duration-200 hover:scale-105 active:scale-95 shadow-md">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5 mr-1.5 text-rose-400"></i>
+                    Borrar Todo
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 z-10 relative">
+
+        <!-- Metrics Overview Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+            
+            <div class="matte-card rounded-2xl p-4 relative overflow-hidden transition shadow-lg hover:-translate-y-1">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-purple-300">Total Caja</span>
+                    <div class="flex items-center gap-1">
+                        <button onclick="abrirModalEditarCaja()" title="Editar dinero en caja" class="p-1 bg-purple-500/20 text-fuchsia-300 rounded-lg border border-purple-500/30 hover:bg-fuchsia-500/30 transition hover:scale-110">
+                            <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <div class="p-2 bg-purple-500/20 text-purple-300 rounded-lg border border-purple-500/30">
+                            <i data-lucide="dollar-sign" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-2xl font-black text-white" id="kpi-total-ventas">$0.00</div>
+                <p class="text-[11px] text-purple-300/70 mt-1">Efectivo recaudado</p>
+            </div>
+
+            <div class="matte-card rounded-2xl p-4 relative overflow-hidden transition shadow-lg hover:-translate-y-1">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-fuchsia-300">Ventas Directas</span>
+                    <div class="p-2 bg-fuchsia-500/20 text-fuchsia-300 rounded-lg border border-fuchsia-500/30">
+                        <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+                    </div>
+                </div>
+                <div class="text-2xl font-black text-white" id="kpi-unidades-vendidas">0 pzas</div>
+                <p class="text-[11px] text-purple-300/70 mt-1">Entregadas inmediatamente</p>
+            </div>
+
+            <div class="matte-card rounded-2xl p-4 relative overflow-hidden transition shadow-lg hover:-translate-y-1">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-violet-300">Apartados Activos</span>
+                    <div class="p-2 bg-violet-500/20 text-violet-300 rounded-lg border border-violet-500/30">
+                        <i data-lucide="bookmark" class="w-4 h-4"></i>
+                    </div>
+                </div>
+                <div class="text-2xl font-black text-white" id="kpi-apartados-activos">0</div>
+                <p class="text-[11px] text-purple-300/70 mt-1" id="kpi-por-cobrar">$0.00 por cobrar</p>
+            </div>
+
+            <div class="matte-card rounded-2xl p-4 relative overflow-hidden transition shadow-lg hover:-translate-y-1">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-300">Valor Inventario</span>
+                    <div class="p-2 bg-emerald-500/20 text-emerald-300 rounded-lg border border-emerald-500/30">
+                        <i data-lucide="package" class="w-4 h-4"></i>
+                    </div>
+                </div>
+                <div class="text-2xl font-black text-white" id="kpi-valor-inventario">$0.00</div>
+                <p class="text-[11px] text-purple-300/70 mt-1">Stock en estante</p>
+            </div>
+
+            <div class="matte-card rounded-2xl p-4 relative overflow-hidden transition shadow-lg hover:-translate-y-1">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-purple-300">Catálogo</span>
+                    <div class="p-2 bg-purple-500/20 text-purple-300 rounded-lg border border-purple-500/30">
+                        <i data-lucide="layers" class="w-4 h-4"></i>
+                    </div>
+                </div>
+                <div class="text-2xl font-black text-white" id="kpi-total-productos">0 modelos</div>
+                <p class="text-[11px] text-purple-300/70 mt-1">Fragancias registradas</p>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="flex border-b border-purple-900/60 space-x-2">
+            <button id="tab-inventario-btn" onclick="cambiarPestana('inventario')" 
+                class="px-5 py-2.5 text-xs font-bold uppercase tracking-wider rounded-t-xl border-t border-x transition flex items-center gap-2 border-purple-500/50 bg-purple-950/90 text-purple-200 shadow-md">
+                <i data-lucide="store" class="w-4 h-4 text-fuchsia-400"></i>
+                Inventario & Ventas Directas
+            </button>
+            <button id="tab-apartados-btn" onclick="cambiarPestana('apartados')" 
+                class="px-5 py-2.5 text-xs font-bold uppercase tracking-wider rounded-t-xl border-t border-x transition flex items-center gap-2 border-transparent text-purple-300/60 hover:text-purple-200 hover:bg-purple-950/40">
+                <i data-lucide="clock" class="w-4 h-4"></i>
+                Gestión de Apartados (Layaway)
+                <span id="badge-apartados-count" class="px-2 py-0.5 text-[10px] bg-purple-600/40 text-purple-200 border border-purple-400/30 rounded-full font-black">0</span>
+            </button>
+        </div>
+
+        <!-- TAB 1: INVENTARIO Y VENTAS DIRECTAS -->
+        <div id="tab-inventario" class="space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                <!-- Form Panel -->
+                <div class="lg:col-span-1">
+                    <div class="matte-card rounded-2xl p-5 relative sticky top-20 shadow-2xl border-purple-500/40">
+                        
+                        <div class="flex items-center space-x-2.5 border-b border-purple-900/80 pb-3 mb-4">
+                            <div class="p-1.5 bg-purple-600/30 text-fuchsia-300 rounded-lg border border-purple-500/40">
+                                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-extrabold text-white">Registrar Fragancia</h3>
+                                <p class="text-[11px] text-purple-300/70">Añade perfumes a piruvatos inc</p>
+                            </div>
+                        </div>
+
+                        <form id="form-perfume" onsubmit="guardarPerfume(event)" class="space-y-3.5">
+                            <input type="hidden" id="input-edit-id" value="">
+
+                            <div>
+                                <label class="block text-[11px] font-bold text-purple-300 uppercase tracking-wider mb-1">
+                                    Nombre del Perfume *
+                                </label>
+                                <input type="text" id="input-nombre" required placeholder="Ej. Sauvage, Baccarat Rouge" 
+                                    class="w-full bg-slate-950/90 border border-purple-900/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-fuchsia-400 transition">
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-bold text-purple-300 uppercase tracking-wider mb-1">
+                                    Marca / Casa *
+                                </label>
+                                <input type="text" id="input-marca" required placeholder="Ej. Dior, Chanel, Creed" 
+                                    class="w-full bg-slate-950/90 border border-purple-900/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-fuchsia-400 transition">
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-purple-300 uppercase tracking-wider mb-1">
+                                        Precio ($) *
+                                    </label>
+                                    <input type="number" step="0.5" min="0" id="input-precio" required placeholder="0.00" 
+                                        class="w-full bg-slate-950/90 border border-purple-900/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-fuchsia-400 transition">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-purple-300 uppercase tracking-wider mb-1">
+                                        Stock *
+                                    </label>
+                                    <input type="number" min="0" id="input-stock" required placeholder="0" 
+                                        class="w-full bg-slate-950/90 border border-purple-900/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-fuchsia-400 transition">
+                                </div>
+                            </div>
+
+                            <div class="pt-2 flex gap-2">
+                                <button type="submit" id="btn-submit-form"
+                                    class="flex-1 bg-gradient-to-r from-purple-700 via-purple-600 to-fuchsia-600 hover:from-purple-600 hover:to-fuchsia-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition duration-200 hover:scale-[1.02] active:scale-95 shadow-lg shadow-purple-900/50">
+                                    <i data-lucide="check" class="w-4 h-4"></i>
+                                    <span id="btn-text-form">Guardar Perfume</span>
+                                </button>
+                                <button type="button" id="btn-cancelar-edit" onclick="cancelarEdicion()" class="hidden bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2.5 rounded-xl font-bold text-xs transition">
+                                    Cancelar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Catalog List -->
+                <div class="lg:col-span-2">
+                    <div class="matte-card rounded-2xl p-5 shadow-xl">
+                        
+                        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mb-5">
+                            <div class="relative w-full sm:w-72">
+                                <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3.5 top-3 text-purple-400"></i>
+                                <input type="text" id="input-busqueda" oninput="renderizarInventario()" placeholder="Buscar perfume o marca..." 
+                                    class="w-full bg-slate-950/90 border border-purple-900/80 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-fuchsia-400 transition">
+                            </div>
+
+                            <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                                <span class="text-[11px] text-purple-300 font-bold">Filtro:</span>
+                                <select id="select-filtro" onchange="renderizarInventario()" class="bg-slate-950 border border-purple-900/80 text-purple-200 text-xs font-bold rounded-xl px-3 py-2 focus:outline-none focus:border-fuchsia-400">
+                                    <option value="todos">Todos</option>
+                                    <option value="con-stock">En Stock</option>
+                                    <option value="agotados">Agotados</option>
+                                    <option value="stock-bajo">Stock Bajo (≤ 3)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Inventory Table -->
+                        <div class="overflow-x-auto rounded-xl border border-purple-950/80 bg-slate-950/70">
+                            <table class="w-full text-left text-xs text-purple-100">
+                                <thead class="bg-purple-950/90 text-[10px] uppercase text-purple-200 font-extrabold border-b border-purple-900/80">
+                                    <tr>
+                                        <th class="py-3 px-3">Fragancia</th>
+                                        <th class="py-3 px-3">Precio</th>
+                                        <th class="py-3 px-3 text-center">Disponible</th>
+                                        <th class="py-3 px-3 text-center">Vendidos</th>
+                                        <th class="py-3 px-3 text-right">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabla-body" class="divide-y divide-purple-950/60">
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div id="mensaje-vacio" class="hidden py-10 text-center text-purple-300/50">
+                            <i data-lucide="package-open" class="w-10 h-10 mx-auto mb-2 opacity-40"></i>
+                            <p class="text-xs font-semibold">No se encontraron perfumes registrados en piruvatos inc.</p>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- TAB 2: APARTADOS (LAYAWAYS) -->
+        <div id="tab-apartados" class="hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                <!-- Layaway Form Panel -->
+                <div class="lg:col-span-1">
+                    <div class="matte-card rounded-2xl p-5 relative sticky top-20 shadow-xl border-purple-500/40">
+                        
+                        <div class="flex items-center space-x-2.5 border-b border-purple-900/80 pb-3 mb-4">
+                            <div class="p-1.5 bg-fuchsia-500/20 text-fuchsia-300 rounded-lg border border-fuchsia-500/30">
+                                <i data-lucide="bookmark-plus" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-extrabold text-white">Nuevo Apartado</h3>
+                                <p class="text-[11px] text-purple-300/70">Registra abonos y fecha límite</p>
+                            </div>
+                        </div>
+
+                        <form id="form-apartado" onsubmit="guardarApartado(event)" class="space-y-3.5">
+                            
+                            <div>
+                                <label class="block text-[11px] font-bold text-purple-300 uppercase tracking-wider mb-1">
+                                    Nombre del Cliente *
+                                </label>
+                                <input type="text" id="input-apartado-cliente" required placeholder="Ej. Carlos Mendoza" 
+                                    class="w-full bg-slate-950/90 border border-purple-900/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-fuchsia-400 transition">
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-bold text-purple-300 uppercase tracking-wider mb-1">
+                                    Seleccionar Perfume *
+                                </label>
+                                <select id="select-apartado-perfume" onchange="actualizarPrecioApartado()" required 
+                                    class="w-full bg-slate-950 border border-purple-900/80 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-fuchsia-400 transition">
+                                    <option value="">-- Elige una fragancia --</option>
+                                </select>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-purple-300 uppercase tracking-wider mb-1">
+                                        Precio Total ($)
+                                    </label>
+                                    <input type="number" step="0.5" id="input-apartado-precio" readonly 
+                                        class="w-full bg-purple-950/40 border border-purple-900/60 rounded-xl px-3.5 py-2.5 text-xs font-bold text-fuchsia-300">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-purple-300 uppercase tracking-wider mb-1">
+                                        Abono Inicial ($) *
+                                    </label>
+                                    <input type="number" step="0.5" min="0" id="input-apartado-abono" required placeholder="0.00" 
+                                        class="w-full bg-slate-950/90 border border-purple-900/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-fuchsia-400 transition">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-bold text-purple-300 uppercase tracking-wider mb-1">
+                                    Fecha Límite de Pago *
+                                </label>
+                                <input type="date" id="input-apartado-fecha" required 
+                                    class="w-full bg-slate-950 border border-purple-900/80 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-fuchsia-400 transition">
+                            </div>
+
+                            <button type="submit" 
+                                class="w-full bg-gradient-to-r from-purple-700 via-fuchsia-600 to-purple-600 hover:from-purple-600 hover:to-fuchsia-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition duration-200 hover:scale-[1.02] active:scale-95 shadow-lg shadow-purple-900/50">
+                                <i data-lucide="calendar-check" class="w-4 h-4"></i>
+                                Registrar Apartado
+                            </button>
+
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Layaway List Table -->
+                <div class="lg:col-span-2">
+                    <div class="matte-card rounded-2xl p-5 shadow-xl border-purple-500/30">
+                        
+                        <div class="flex items-center justify-between mb-4 border-b border-purple-900/80 pb-3">
+                            <div>
+                                <h3 class="text-sm font-extrabold text-white">Listado de Apartados</h3>
+                                <p class="text-[11px] text-purple-300/70">Seguimiento de abonos y vencimientos</p>
+                            </div>
+                            <select id="select-filtro-apartados" onchange="renderizarApartados()" class="bg-slate-950 border border-purple-900/80 text-purple-200 text-xs font-bold rounded-xl px-3 py-1.5 focus:outline-none focus:border-fuchsia-400">
+                                <option value="activos">Activos</option>
+                                <option value="vencidos">Próximos / Vencidos</option>
+                                <option value="completados">Entregados / Pagados</option>
+                                <option value="todos">Todos</option>
+                            </select>
+                        </div>
+
+                        <div class="overflow-x-auto rounded-xl border border-purple-950/80 bg-slate-950/70">
+                            <table class="w-full text-left text-xs text-purple-100">
+                                <thead class="bg-purple-950/90 text-[10px] uppercase text-purple-200 font-extrabold border-b border-purple-900/80">
+                                    <tr>
+                                        <th class="py-3 px-3">Cliente / Perfume</th>
+                                        <th class="py-3 px-3">Estado de Pago</th>
+                                        <th class="py-3 px-3 text-center">Restante</th>
+                                        <th class="py-3 px-3 text-center">Fecha Límite</th>
+                                        <th class="py-3 px-3 text-right">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabla-body-apartados" class="divide-y divide-purple-950/60">
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div id="mensaje-vacio-apartados" class="hidden py-10 text-center text-purple-300/50">
+                            <i data-lucide="clock" class="w-10 h-10 mx-auto mb-2 opacity-40"></i>
+                            <p class="text-xs font-semibold">No hay registros de apartados activos.</p>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal: Editar Caja -->
+    <div id="modal-editar-caja" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-purple-950 border border-purple-600/60 rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4 animate-pop">
+            <div class="flex items-center space-x-2 text-fuchsia-400">
+                <i data-lucide="edit-3" class="w-5 h-5"></i>
+                <h3 class="font-extrabold text-base text-white">Ajustar Total en Caja</h3>
+            </div>
+            <p class="text-xs text-purple-200">
+                Ingresa el nuevo monto exacto que hay en la caja. Esto corregirá el acumulado.
+            </p>
+            <div>
+                <label class="block text-[11px] font-bold text-purple-300 uppercase mb-1">Nuevo Monto Total ($ MXN)</label>
+                <input type="number" step="0.5" min="0" id="input-nuevo-monto-caja" placeholder="0.00"
+                    class="w-full bg-slate-950 border border-purple-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-fuchsia-400">
+            </div>
+            <div class="flex justify-end space-x-2 pt-2">
+                <button onclick="cerrarModalEditarCaja()" class="border border-purple-800 hover:bg-purple-900/60 text-purple-300 font-semibold text-xs px-3.5 py-2 rounded-xl transition">
+                    Cancelar
+                </button>
+                <button onclick="ejecutarEdicionCaja()" class="bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 text-white font-black text-xs px-4 py-2 rounded-xl shadow-lg transition">
+                    Guardar Cambio
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Registrar Abono -->
+    <div id="modal-abono" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-purple-950 border border-purple-600/60 rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4 animate-pop">
+            <div class="flex items-center space-x-2 text-fuchsia-400">
+                <i data-lucide="coins" class="w-5 h-5"></i>
+                <h3 class="font-extrabold text-base text-white">Registrar Abono</h3>
+            </div>
+            <p class="text-xs text-purple-200" id="modal-abono-info"></p>
+            <div>
+                <label class="block text-[11px] font-bold text-purple-300 uppercase mb-1">Monto del Abono ($ MXN)</label>
+                <input type="number" step="0.5" min="1" id="input-monto-abono" placeholder="0.00"
+                    class="w-full bg-slate-950 border border-purple-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-fuchsia-400">
+            </div>
+            <div class="flex justify-end space-x-2 pt-2">
+                <button onclick="cerrarModalAbono()" class="border border-purple-800 hover:bg-purple-900/60 text-purple-300 font-semibold text-xs px-3.5 py-2 rounded-xl transition">
+                    Cancelar
+                </button>
+                <button onclick="ejecutarAbono()" class="bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 text-white font-black text-xs px-4 py-2 rounded-xl shadow-lg transition">
+                    Guardar Abono
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Modal -->
+    <div id="modal-alerta" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-purple-950 border border-purple-600/60 rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-3 animate-pop">
+            <div class="flex items-center space-x-2 text-fuchsia-400">
+                <i data-lucide="sparkles" class="w-5 h-5"></i>
+                <h3 class="font-extrabold text-base text-white" id="modal-titulo">Aviso</h3>
+            </div>
+            <p class="text-xs text-purple-200" id="modal-mensaje"></p>
+            <div class="flex justify-end pt-2">
+                <button onclick="cerrarModal()" class="bg-purple-700 hover:bg-purple-600 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow">
+                    Entendido
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Modal (Cierre Turno) -->
+    <div id="modal-confirmar" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-purple-950 border border-purple-700 rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-3 animate-pop">
+            <div class="flex items-center space-x-2 text-purple-300">
+                <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+                <h3 class="font-extrabold text-base text-white">¿Realizar Cierre de Turno?</h3>
+            </div>
+            <p class="text-xs text-purple-200">
+                El total recaudado en caja se reiniciará a $0.00. <strong class="text-fuchsia-300">Tu catálogo de perfumes y los apartados activos en piruvatos inc se mantendrán intactos.</strong>
+            </p>
+            <div class="flex justify-end space-x-2 pt-2">
+                <button onclick="cerrarModalConfirmar()" class="border border-purple-800 hover:bg-purple-900/60 text-purple-300 font-semibold text-xs px-3 py-2 rounded-xl transition">
+                    Cancelar
+                </button>
+                <button onclick="ejecutarCierreCaja()" class="bg-purple-700 hover:bg-purple-600 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow">
+                    Reiniciar Caja
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Delete All Modal -->
+    <div id="modal-borrar-todo" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-purple-950 border border-rose-800 rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-3 animate-pop">
+            <div class="flex items-center space-x-2 text-rose-400">
+                <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                <h3 class="font-extrabold text-base text-white">¿Borrar Todo en piruvatos inc?</h3>
+            </div>
+            <p class="text-xs text-purple-200">
+                Esta acción eliminará <strong class="text-rose-400">absolutamente todos los perfumes, apartados y ventas acumuladas.</strong>
+            </p>
+            <div class="flex justify-end space-x-2 pt-2">
+                <button onclick="cerrarModalBorrarTodo()" class="border border-purple-800 hover:bg-purple-900/60 text-purple-300 font-semibold text-xs px-3 py-2 rounded-xl transition">
+                    Cancelar
+                </button>
+                <button onclick="ejecutarBorrarTodo()" class="bg-rose-700 hover:bg-rose-600 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow">
+                    Sí, Borrar Todo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const LOCAL_STORAGE_KEY = 'piruvatos_inc_purple_v1';
+
+        let estadoApp = {
+            perfumes: [],
+            apartados: [],
+            totalVentasCaja: 0
+        };
+
+        let apartadoAbonoSeleccionadoId = null;
+
+        window.onload = function() {
+            cargarDatosDesdeStorage();
+            lucide.createIcons();
+            actualizarSelectApartadosPerfumes();
+            renderizarInventario();
+            renderizarApartados();
+            actualizarKPIs();
+        };
+
+        function cargarDatosDesdeStorage() {
+            try {
+                const datosGuardados = localStorage.getItem(LOCAL_STORAGE_KEY);
+                if (datosGuardados) {
+                    estadoApp = JSON.parse(datosGuardados);
+                    if (!estadoApp.apartados) estadoApp.apartados = [];
+                } else {
+                    estadoApp.perfumes = [
+                        { id: '1', nombre: 'Sauvage Elixir', marca: 'Dior', precio: 3400, stock: 5, vendidos: 2 },
+                        { id: '2', nombre: 'Baccarat Rouge 540', marca: 'Maison Francis Kurkdjian', precio: 6800, stock: 2, vendidos: 1 },
+                        { id: '3', nombre: 'Eros Flame', marca: 'Versace', precio: 2300, stock: 4, vendidos: 3 },
+                        { id: '4', nombre: 'Bleu de Chanel', marca: 'Chanel', precio: 3600, stock: 3, vendidos: 2 }
+                    ];
+                    estadoApp.apartados = [
+                        {
+                            id: 'ap-1',
+                            cliente: 'Daniela Gómez',
+                            perfumeId: '2',
+                            perfumeNombre: 'Baccarat Rouge 540',
+                            precioTotal: 6800,
+                            abonado: 3000,
+                            fechaLimite: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().slice(0,10),
+                            estado: 'activo'
+                        }
+                    ];
+                    estadoApp.totalVentasCaja = 21100;
+                    guardarEnStorage();
+                }
+            } catch (e) {
+                console.error("Error al cargar LocalStorage:", e);
+            }
+        }
+
+        function guardarEnStorage() {
+            try {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(estadoApp));
+            } catch (e) {
+                console.error("Error al guardar en LocalStorage:", e);
+            }
+        }
+
+        function lanzarConfettiMatte() {
+            confetti({
+                particleCount: 65,
+                spread: 80,
+                origin: { y: 0.65 },
+                colors: ['#a855f7', '#c084fc', '#e879f9', '#d8b4fe']
+            });
+        }
+
+        function cambiarPestana(pestana) {
+            const tabInv = document.getElementById('tab-inventario');
+            const tabApa = document.getElementById('tab-apartados');
+            const btnInv = document.getElementById('tab-inventario-btn');
+            const btnApa = document.getElementById('tab-apartados-btn');
+
+            if (pestana === 'inventario') {
+                tabInv.classList.remove('hidden');
+                tabApa.classList.add('hidden');
+                btnInv.className = "px-5 py-2.5 text-xs font-bold uppercase tracking-wider rounded-t-xl border-t border-x transition flex items-center gap-2 border-purple-500/50 bg-purple-950/90 text-purple-200 shadow-md";
+                btnApa.className = "px-5 py-2.5 text-xs font-bold uppercase tracking-wider rounded-t-xl border-t border-x transition flex items-center gap-2 border-transparent text-purple-300/60 hover:text-purple-200 hover:bg-purple-950/40";
+            } else {
+                tabInv.classList.add('hidden');
+                tabApa.classList.remove('hidden');
+                btnApa.className = "px-5 py-2.5 text-xs font-bold uppercase tracking-wider rounded-t-xl border-t border-x transition flex items-center gap-2 border-purple-500/50 bg-purple-950/90 text-purple-200 shadow-md";
+                btnInv.className = "px-5 py-2.5 text-xs font-bold uppercase tracking-wider rounded-t-xl border-t border-x transition flex items-center gap-2 border-transparent text-purple-300/60 hover:text-purple-200 hover:bg-purple-950/40";
+            }
+        }
+
+        // Editar Total en Caja
+        function abrirModalEditarCaja() {
+            document.getElementById('input-nuevo-monto-caja').value = estadoApp.totalVentasCaja;
+            document.getElementById('modal-editar-caja').classList.remove('hidden');
+        }
+
+        function cerrarModalEditarCaja() {
+            document.getElementById('modal-editar-caja').classList.add('hidden');
+        }
+
+        function ejecutarEdicionCaja() {
+            const nuevoMonto = parseFloat(document.getElementById('input-nuevo-monto-caja').value);
+            if (isNaN(nuevoMonto) || nuevoMonto < 0) {
+                mostrarModal("Error", "Ingresa un monto válido.");
+                return;
+            }
+
+            estadoApp.totalVentasCaja = nuevoMonto;
+            guardarEnStorage();
+            actualizarKPIs();
+            cerrarModalEditarCaja();
+            mostrarModal("Caja Corregida", `El total en caja se ha actualizado a $${nuevoMonto.toLocaleString('es-MX', { minimumFractionDigits: 2 })}.`);
+        }
+
+        // Inventory Management
+        function guardarPerfume(e) {
+            e.preventDefault();
+            const editId = document.getElementById('input-edit-id').value;
+            const nombre = document.getElementById('input-nombre').value.trim();
+            const marca = document.getElementById('input-marca').value.trim();
+            const precio = parseFloat(document.getElementById('input-precio').value);
+            const stock = parseInt(document.getElementById('input-stock').value);
+
+            if (!nombre || !marca || isNaN(precio) || isNaN(stock)) {
+                mostrarModal("Incompleto", "Llena todos los campos correctamente.");
+                return;
+            }
+
+            if (editId) {
+                const idx = estadoApp.perfumes.findIndex(p => p.id === editId);
+                if (idx !== -1) {
+                    estadoApp.perfumes[idx].nombre = nombre;
+                    estadoApp.perfumes[idx].marca = marca;
+                    estadoApp.perfumes[idx].precio = precio;
+                    estadoApp.perfumes[idx].stock = stock;
+                }
+                cancelarEdicion();
+                mostrarModal("Actualizado", `"${nombre}" editado con éxito.`);
+            } else {
+                const nuevo = { id: Date.now().toString(), nombre, marca, precio, stock, vendidos: 0 };
+                estadoApp.perfumes.unshift(nuevo);
+                lanzarConfettiMatte();
+                mostrarModal("Registrado", `"${nombre}" guardado en piruvatos inc.`);
+            }
+
+            guardarEnStorage();
+            document.getElementById('form-perfume').reset();
+            actualizarSelectApartadosPerfumes();
+            renderizarInventario();
+            actualizarKPIs();
+        }
+
+        function venderPerfume(id) {
+            const p = estadoApp.perfumes.find(p => p.id === id);
+            if (p && p.stock > 0) {
+                p.stock -= 1;
+                p.vendidos += 1;
+                estadoApp.totalVentasCaja += p.precio;
+
+                guardarEnStorage();
+                renderizarInventario();
+                actualizarKPIs();
+                lanzarConfettiMatte();
+            }
+        }
+
+        function reabastecerPerfume(id) {
+            const p = estadoApp.perfumes.find(p => p.id === id);
+            if (p) {
+                p.stock += 1;
+                guardarEnStorage();
+                renderizarInventario();
+                actualizarKPIs();
+            }
+        }
+
+        function prepararEdicion(id) {
+            const p = estadoApp.perfumes.find(p => p.id === id);
+            if (!p) return;
+            document.getElementById('input-edit-id').value = p.id;
+            document.getElementById('input-nombre').value = p.nombre;
+            document.getElementById('input-marca').value = p.marca;
+            document.getElementById('input-precio').value = p.precio;
+            document.getElementById('input-stock').value = p.stock;
+            document.getElementById('btn-text-form').innerText = "Actualizar";
+            document.getElementById('btn-cancelar-edit').classList.remove('hidden');
+        }
+
+        function cancelarEdicion() {
+            document.getElementById('input-edit-id').value = '';
+            document.getElementById('form-perfume').reset();
+            document.getElementById('btn-text-form').innerText = "Guardar Perfume";
+            document.getElementById('btn-cancelar-edit').classList.add('hidden');
+        }
+
+        function eliminarPerfume(id) {
+            const p = estadoApp.perfumes.find(p => p.id === id);
+            if (p && confirm(`¿Eliminar "${p.nombre}"?`)) {
+                estadoApp.perfumes = estadoApp.perfumes.filter(item => item.id !== id);
+                guardarEnStorage();
+                actualizarSelectApartadosPerfumes();
+                renderizarInventario();
+                actualizarKPIs();
+            }
+        }
+
+        function renderizarInventario() {
+            const tbody = document.getElementById('tabla-body');
+            const busqueda = document.getElementById('input-busqueda').value.toLowerCase();
+            const filtro = document.getElementById('select-filtro').value;
+            const mensajeVacio = document.getElementById('mensaje-vacio');
+
+            tbody.innerHTML = '';
+
+            let lista = estadoApp.perfumes.filter(p => {
+                const coincide = p.nombre.toLowerCase().includes(busqueda) || p.marca.toLowerCase().includes(busqueda);
+                if (!coincide) return false;
+                if (filtro === 'con-stock') return p.stock > 0;
+                if (filtro === 'agotados') return p.stock === 0;
+                if (filtro === 'stock-bajo') return p.stock > 0 && p.stock <= 3;
+                return true;
+            });
+
+            if (lista.length === 0) {
+                mensajeVacio.classList.remove('hidden');
+            } else {
+                mensajeVacio.classList.add('hidden');
+            }
+
+            lista.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-purple-900/30 transition group animate-pop duration-200";
+
+                let badgeStock = `<span class="inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">${p.stock} pzas</span>`;
+                if (p.stock === 0) {
+                    badgeStock = `<span class="inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/30">Agotado</span>`;
+                } else if (p.stock <= 3) {
+                    badgeStock = `<span class="inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-400/30">${p.stock} ¡Bajo!</span>`;
+                }
+
+                tr.innerHTML = `
+                    <td class="py-3 px-3">
+                        <div class="font-bold text-white group-hover:text-fuchsia-300 transition">${escapeHTML(p.nombre)}</div>
+                        <div class="text-[10px] text-purple-300/80 uppercase font-semibold">${escapeHTML(p.marca)}</div>
+                    </td>
+                    <td class="py-3 px-3 font-bold text-fuchsia-300">
+                        $${p.precio.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td class="py-3 px-3 text-center">${badgeStock}</td>
+                    <td class="py-3 px-3 text-center font-bold text-purple-300">${p.vendidos}</td>
+                    <td class="py-3 px-3 text-right">
+                        <div class="flex items-center justify-end space-x-1">
+                            <button onclick="venderPerfume('${p.id}')" ${p.stock === 0 ? 'disabled' : ''} 
+                                class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase ${p.stock > 0 ? 'bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-500/40 hover:scale-105 active:scale-95' : 'bg-slate-900 text-slate-600 cursor-not-allowed'} transition">
+                                Vender 1
+                            </button>
+                            <button onclick="reabastecerPerfume('${p.id}')" class="p-1.5 text-sky-400 hover:bg-sky-500/20 rounded-lg transition hover:scale-110">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button onclick="prepararEdicion('${p.id}')" class="p-1.5 text-fuchsia-400 hover:bg-fuchsia-500/20 rounded-lg transition hover:scale-110">
+                                <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button onclick="eliminarPerfume('${p.id}')" class="p-1.5 text-rose-400 hover:bg-rose-500/20 rounded-lg transition hover:scale-110">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            lucide.createIcons();
+        }
+
+        // Layaway Management ("Apartados")
+        function actualizarSelectApartadosPerfumes() {
+            const select = document.getElementById('select-apartado-perfume');
+            select.innerHTML = '<option value="">-- Elige una fragancia --</option>';
+            estadoApp.perfumes.forEach(p => {
+                if (p.stock > 0) {
+                    select.innerHTML += `<option value="${p.id}">${escapeHTML(p.nombre)} - $${p.precio} (Stock: ${p.stock})</option>`;
+                }
+            });
+        }
+
+        function actualizarPrecioApartado() {
+            const perfumeId = document.getElementById('select-apartado-perfume').value;
+            const p = estadoApp.perfumes.find(x => x.id === perfumeId);
+            document.getElementById('input-apartado-precio').value = p ? p.precio : '';
+        }
+
+        function guardarApartado(e) {
+            e.preventDefault();
+            const cliente = document.getElementById('input-apartado-cliente').value.trim();
+            const perfumeId = document.getElementById('select-apartado-perfume').value;
+            const abono = parseFloat(document.getElementById('input-apartado-abono').value);
+            const fechaLimite = document.getElementById('input-apartado-fecha').value;
+
+            const perfume = estadoApp.perfumes.find(p => p.id === perfumeId);
+
+            if (!cliente || !perfume || isNaN(abono) || !fechaLimite) {
+                mostrarModal("Datos Incompletos", "Verifica los datos del apartado.");
+                return;
+            }
+
+            if (abono > perfume.precio) {
+                mostrarModal("Abono Excedido", "El abono inicial no puede ser mayor al precio total del perfume.");
+                return;
+            }
+
+            if (perfume.stock <= 0) {
+                mostrarModal("Sin Stock", "No hay piezas disponibles de este perfume para apartar.");
+                return;
+            }
+
+            perfume.stock -= 1;
+
+            const nuevoApartado = {
+                id: 'ap-' + Date.now(),
+                cliente,
+                perfumeId: perfume.id,
+                perfumeNombre: perfume.nombre,
+                precioTotal: perfume.precio,
+                abonado: abono,
+                fechaLimite,
+                estado: (abono >= perfume.precio) ? 'completado' : 'activo'
+            };
+
+            estadoApp.totalVentasCaja += abono;
+            estadoApp.apartados.unshift(nuevoApartado);
+
+            guardarEnStorage();
+            document.getElementById('form-apartado').reset();
+            document.getElementById('input-apartado-precio').value = '';
+            
+            actualizarSelectApartadosPerfumes();
+            renderizarInventario();
+            renderizarApartados();
+            actualizarKPIs();
+            lanzarConfettiMatte();
+            mostrarModal("Apartado Registrado", `Apartado creado para ${cliente}. Abono recibido: $${abono}.`);
+        }
+
+        function abrirModalAbono(id) {
+            const ap = estadoApp.apartados.find(a => a.id === id);
+            if (!ap) return;
+            apartadoAbonoSeleccionadoId = id;
+            const restante = ap.precioTotal - ap.abonado;
+            document.getElementById('modal-abono-info').innerHTML = 
+                `Cliente: <strong>${escapeHTML(ap.cliente)}</strong><br>Perfume: <strong>${escapeHTML(ap.perfumeNombre)}</strong><br>Pendiente: <strong class="text-fuchsia-300">$${restante.toFixed(2)}</strong>`;
+            document.getElementById('input-monto-abono').value = '';
+            document.getElementById('modal-abono').classList.remove('hidden');
+        }
+
+        function cerrarModalAbono() {
+            document.getElementById('modal-abono').classList.add('hidden');
+            apartadoAbonoSeleccionadoId = null;
+        }
+
+        function ejecutarAbono() {
+            const monto = parseFloat(document.getElementById('input-monto-abono').value);
+            const ap = estadoApp.apartados.find(a => a.id === apartadoAbonoSeleccionadoId);
+
+            if (!ap || isNaN(monto) || monto <= 0) {
+                mostrarModal("Monto Inválido", "Ingresa un monto de abono válido.");
+                return;
+            }
+
+            const restante = ap.precioTotal - ap.abonado;
+            if (monto > restante) {
+                mostrarModal("Monto Excedido", `El abono máximo es de $${restante.toFixed(2)}.`);
+                return;
+            }
+
+            ap.abonado += monto;
+            estadoApp.totalVentasCaja += monto;
+
+            if (ap.abonado >= ap.precioTotal) {
+                ap.estado = 'completado';
+                const p = estadoApp.perfumes.find(x => x.id === ap.perfumeId);
+                if (p) p.vendidos += 1;
+                lanzarConfettiMatte();
+            }
+
+            guardarEnStorage();
+            cerrarModalAbono();
+            renderizarApartados();
+            renderizarInventario();
+            actualizarKPIs();
+            mostrarModal("Abono Exitoso", `Se registraron $${monto} al apartado de ${ap.cliente}.`);
+        }
+
+        function entregarApartado(id) {
+            const ap = estadoApp.apartados.find(a => a.id === id);
+            if (!ap) return;
+
+            const restante = ap.precioTotal - ap.abonado;
+            if (restante > 0) {
+                if (confirm(`El cliente aún debe $${restante.toFixed(2)}. ¿Liquidar totalidad y entregar perfume?`)) {
+                    estadoApp.totalVentasCaja += restante;
+                    ap.abonado = ap.precioTotal;
+                } else {
+                    return;
+                }
+            }
+
+            ap.estado = 'completado';
+            const p = estadoApp.perfumes.find(x => x.id === ap.perfumeId);
+            if (p) p.vendidos += 1;
+
+            guardarEnStorage();
+            renderizarApartados();
+            renderizarInventario();
+            actualizarKPIs();
+            lanzarConfettiMatte();
+            mostrarModal("Entregado", `El apartado de ${ap.cliente} fue completado y entregado.`);
+        }
+
+        function cancelarApartado(id) {
+            const ap = estadoApp.apartados.find(a => a.id === id);
+            if (!ap) return;
+
+            if (confirm(`¿Cancelar apartado de ${ap.cliente}? La pieza regresará al stock disponible.`)) {
+                const p = estadoApp.perfumes.find(x => x.id === ap.perfumeId);
+                if (p) p.stock += 1;
+
+                estadoApp.apartados = estadoApp.apartados.filter(a => a.id !== id);
+                guardarEnStorage();
+                actualizarSelectApartadosPerfumes();
+                renderizarApartados();
+                renderizarInventario();
+                actualizarKPIs();
+            }
+        }
+
+        function renderizarApartados() {
+            const tbody = document.getElementById('tabla-body-apartados');
+            const filtro = document.getElementById('select-filtro-apartados').value;
+            const mensajeVacio = document.getElementById('mensaje-vacio-apartados');
+
+            tbody.innerHTML = '';
+            const hoy = new Date().toISOString().slice(0,10);
+
+            let lista = estadoApp.apartados.filter(ap => {
+                if (filtro === 'activos') return ap.estado === 'activo';
+                if (filtro === 'vencidos') return ap.estado === 'activo' && ap.fechaLimite <= hoy;
+                if (filtro === 'completados') return ap.estado === 'completado';
+                return true;
+            });
+
+            document.getElementById('badge-apartados-count').innerText = 
+                estadoApp.apartados.filter(a => a.estado === 'activo').length;
+
+            if (lista.length === 0) {
+                mensajeVacio.classList.remove('hidden');
+            } else {
+                mensajeVacio.classList.add('hidden');
+            }
+
+            lista.forEach(ap => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-purple-900/30 transition group animate-pop duration-200";
+
+                const restante = ap.precioTotal - ap.abonado;
+                const porcentaje = Math.min(100, Math.round((ap.abonado / ap.precioTotal) * 100));
+                const esVencido = ap.estado === 'activo' && ap.fechaLimite < hoy;
+                const esHoy = ap.estado === 'activo' && ap.fechaLimite === hoy;
+
+                let badgeFecha = `<span class="text-purple-200 font-semibold">${ap.fechaLimite}</span>`;
+                if (esVencido) {
+                    badgeFecha = `<span class="px-2 py-0.5 bg-rose-500/20 text-rose-300 border border-rose-500/40 rounded-full font-bold">¡Vencido! (${ap.fechaLimite})</span>`;
+                } else if (esHoy) {
+                    badgeFecha = `<span class="px-2 py-0.5 bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-400/40 rounded-full font-bold">¡Vence hoy!</span>`;
+                } else if (ap.estado === 'completado') {
+                    badgeFecha = `<span class="text-emerald-400 font-bold">Entregado</span>`;
+                }
+
+                tr.innerHTML = `
+                    <td class="py-3 px-3">
+                        <div class="font-bold text-white">${escapeHTML(ap.cliente)}</div>
+                        <div class="text-[10px] text-fuchsia-300 font-semibold">${escapeHTML(ap.perfumeNombre)}</div>
+                    </td>
+                    <td class="py-3 px-3">
+                        <div class="flex items-center justify-between text-[10px] text-purple-300 mb-1">
+                            <span>Abonado: $${ap.abonado.toLocaleString()}</span>
+                            <span>${porcentaje}%</span>
+                        </div>
+                        <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden border border-purple-900">
+                            <div class="bg-gradient-to-r from-purple-500 to-fuchsia-400 h-1.5 rounded-full" style="width: ${porcentaje}%"></div>
+                        </div>
+                    </td>
+                    <td class="py-3 px-3 text-center font-bold text-fuchsia-300">
+                        $${restante.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td class="py-3 px-3 text-center">
+                        ${badgeFecha}
+                    </td>
+                    <td class="py-3 px-3 text-right">
+                        <div class="flex items-center justify-end space-x-1">
+                            ${ap.estado === 'activo' ? `
+                                <button onclick="abrirModalAbono('${ap.id}')" title="Abonar dinero"
+                                    class="px-2 py-1 bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-500/30 rounded-lg text-[10px] font-bold transition hover:scale-105 active:scale-95">
+                                    + Abono
+                                </button>
+                                <button onclick="entregarApartado('${ap.id}')" title="Completar y Entregar"
+                                    class="px-2 py-1 bg-fuchsia-600/30 hover:bg-fuchsia-600/50 text-fuchsia-200 border border-fuchsia-500/30 rounded-lg text-[10px] font-bold transition hover:scale-105 active:scale-95">
+                                    Entregar
+                                </button>
+                            ` : `
+                                <span class="text-[10px] text-emerald-400 font-bold px-2 py-1 bg-emerald-500/10 rounded-lg">Completado</span>
+                            `}
+                            <button onclick="cancelarApartado('${ap.id}')" title="Cancelar apartado"
+                                class="p-1 text-rose-400 hover:bg-rose-500/20 rounded-lg transition hover:scale-110">
+                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            lucide.createIcons();
+        }
+
+        // Metrics Calculations
+        function actualizarKPIs() {
+            document.getElementById('kpi-total-ventas').innerText = 
+                `$${estadoApp.totalVentasCaja.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+
+            const totalVendidos = estadoApp.perfumes.reduce((acc, p) => acc + (p.vendidos || 0), 0);
+            document.getElementById('kpi-unidades-vendidas').innerText = `${totalVendidos} pzas`;
+
+            const apartadosActivos = estadoApp.apartados.filter(a => a.estado === 'activo');
+            document.getElementById('kpi-apartados-activos').innerText = apartadosActivos.length;
+
+            const porCobrar = apartadosActivos.reduce((acc, a) => acc + (a.precioTotal - a.abonado), 0);
+            document.getElementById('kpi-por-cobrar').innerText = `$${porCobrar.toLocaleString('es-MX')} por cobrar`;
+
+            const valorInventario = estadoApp.perfumes.reduce((acc, p) => acc + (p.precio * p.stock), 0);
+            document.getElementById('kpi-valor-inventario').innerText = 
+                `$${valorInventario.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+
+            document.getElementById('kpi-total-productos').innerText = `${estadoApp.perfumes.length} modelos`;
+        }
+
+        // CSV Report Export
+        function exportarReporteCSV() {
+            let csv = "--- CATALOGO DE PERFUMES DE PIRUVATOS INC ---\nID,Perfume,Marca,Precio,Stock,Vendidos\n";
+            estadoApp.perfumes.forEach(p => {
+                csv += `"${p.id}","${p.nombre}","${p.marca}",${p.precio},${p.stock},${p.vendidos}\n`;
+            });
+
+            csv += "\n--- APARTADOS ---\nID,Cliente,Perfume,PrecioTotal,Abonado,Restante,FechaLimite,Estado\n";
+            estadoApp.apartados.forEach(a => {
+                csv += `"${a.id}","${a.cliente}","${a.perfumeNombre}",${a.precioTotal},${a.abonado},${a.precioTotal - a.abonado},"${a.fechaLimite}","${a.estado}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `piruvatos_inc_reporte_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
+        }
+
+        // Modals Control
+        function confirmarCierreCaja() {
+            document.getElementById('modal-confirmar').classList.remove('hidden');
+        }
+
+        function cerrarModalConfirmar() {
+            document.getElementById('modal-confirmar').classList.add('hidden');
+        }
+
+        function ejecutarCierreCaja() {
+            estadoApp.totalVentasCaja = 0;
+            guardarEnStorage();
+            actualizarKPIs();
+            cerrarModalConfirmar();
+            mostrarModal("Caja Reiniciada", "El total en caja se ha puesto a $0.00.");
+        }
+
+        function confirmarBorrarTodo() {
+            document.getElementById('modal-borrar-todo').classList.remove('hidden');
+        }
+
+        function cerrarModalBorrarTodo() {
+            document.getElementById('modal-borrar-todo').classList.add('hidden');
+        }
+
+        function ejecutarBorrarTodo() {
+            estadoApp.perfumes = [];
+            estadoApp.apartados = [];
+            estadoApp.totalVentasCaja = 0;
+            guardarEnStorage();
+            actualizarSelectApartadosPerfumes();
+            renderizarInventario();
+            renderizarApartados();
+            actualizarKPIs();
+            cerrarModalBorrarTodo();
+            mostrarModal("Reiniciado", "Se han borrado todos los registros de piruvatos inc.");
+        }
+
+        function mostrarModal(titulo, mensaje) {
+            document.getElementById('modal-titulo').innerText = titulo;
+            document.getElementById('modal-mensaje').innerText = mensaje;
+            document.getElementById('modal-alerta').classList.remove('hidden');
+        }
+
+        function cerrarModal() {
+            document.getElementById('modal-alerta').classList.add('hidden');
+        }
+
+        function escapeHTML(str) {
+            return (str || '').replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+    </script>
+</body>
+<!-- Al final de tu <body> de tu index.html -->
+<script type="module" src="app.js"></script>
+</html>
+            
